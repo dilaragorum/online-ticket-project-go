@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
 	"github.com/dilaragorum/online-ticket-project-go/model"
 	"github.com/dilaragorum/online-ticket-project-go/service"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var (
@@ -13,8 +16,11 @@ var (
 	WarnMessageWhenEmailIsNotUnique    = "This email has already been registered"
 	WarnInternalServerError            = "an error occurred please try again later"
 	WarnEmptyUserName                  = "Username cannot be empty"
-	WarnValidEmail                     = "Please enter valid email address"
+	WarnNonValidEmail                  = "Please enter valid email address"
 	WarnPasswordLength                 = "Password should be eight or more characters"
+	WarnNonValidCredentials            = "Please enter valid username or password"
+	WarnWhenUsernameNotFound           = "Invalid username, please enter valid user name"
+	SuccessLoginMessage                = "Congratulations, you have successfully logged into the system."
 )
 
 type DefaultHandler struct {
@@ -24,6 +30,7 @@ type DefaultHandler struct {
 func NewDefaultOnlineTicketHandler(e *echo.Echo, service service.Service) *DefaultHandler {
 	ot := DefaultHandler{service: service}
 	e.POST("/register", ot.Register)
+	e.POST("/login", ot.LogIn)
 	return &DefaultHandler{}
 }
 
@@ -39,7 +46,7 @@ func (ot *DefaultHandler) Register(c echo.Context) error {
 	}
 
 	if !strings.Contains(user.Email, "@") {
-		return c.String(http.StatusBadRequest, WarnValidEmail)
+		return c.String(http.StatusBadRequest, WarnNonValidEmail)
 	}
 
 	if len(user.Password) < 8 {
@@ -60,3 +67,103 @@ func (ot *DefaultHandler) Register(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, register)
 }
+func (ot *DefaultHandler) LogIn(c echo.Context) error {
+	var credentials model.Credentials
+	err := json.NewDecoder(c.Request().Body).Decode(&credentials)
+	if err != nil {
+		return c.String(http.StatusBadRequest, WarnNonValidCredentials)
+	}
+
+	user, err := ot.service.LogIn(c.Request().Context(), credentials)
+	if err != nil {
+		if err.Error() == service.ErrUsernameNotFound.Error() {
+			return c.String(http.StatusNotFound, WarnWhenUsernameNotFound)
+		} else if err.Error() == service.ErrUsernameOrPasswordInvalid.Error() {
+			return c.String(http.StatusUnauthorized, WarnNonValidCredentials)
+		}
+		return c.String(http.StatusInternalServerError, WarnInternalServerError)
+	}
+
+	expitationTime := &jwt.NumericDate{Time: time.Now().Add(5 * time.Minute)}
+	claims := model.Claims{
+		Username: user.UserName,
+		UserType: user.UserType,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: expitationTime,
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte("jwtKey")) //ToDo: Burada key farklı şekilde ver.
+	if err != nil {
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	cookie := new(http.Cookie)
+	cookie.Name = "token"
+	cookie.Value = tokenString
+	cookie.Expires = expitationTime.Time
+	c.SetCookie(cookie)
+
+	return c.String(http.StatusOK, SuccessLoginMessage)
+}
+
+/*func signIn(c echo.Context) error {
+	var credentials Credentials
+	err := json.NewDecoder(c.Request().Body).Decode(&credentials)
+	if err != nil {
+		c.NoContent(http.StatusBadRequest)
+		return err
+	}
+
+	// Map tuttuğumuz için buradan kontrol ediyoruz. Diğer durumda Database'e sormak gerekiyor.
+	expectedPassword, ok := users[credentials.UserName]
+
+	// Bu user var mı var ise girdiği password doğru mu
+	if !ok || expectedPassword != credentials.Password {
+		c.NoContent(http.StatusUnauthorized)
+		return nil
+	}
+
+	// Declare the expiration time of the token
+	// here, we have kept it as 5 minutes
+
+	expirationTime := &jwt.NumericDate{Time: time.Now().Add(5 * time.Minute)}
+	claims := Claims{
+		Username: credentials.UserName,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: expirationTime,
+		},
+	}
+
+	// Declare the token with the algorithm used for signing, and the claims
+	// Header(algorithm + JWT) + Payload(Claim)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// Create the JWT string = secretkey + Header + Claim
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		c.NoContent(http.StatusInternalServerError)
+		return err
+	}
+
+	// Finally, we set the client cookie for "token" as the JWT we just generated
+	// we also set an expiry time which is the same as the token itself
+
+	cookie := new(http.Cookie)
+	cookie.Name = "token"
+	cookie.Value = tokenString
+	cookie.Expires = expirationTime.Time
+	c.SetCookie(cookie)
+
+	c.String(http.StatusOK, "Başarılı bir şekilde giriş yapıldı")
+	return nil
+}
+
+func logOut(c echo.Context) error {
+	cookie := new(http.Cookie)
+	cookie.Name = "token"
+	cookie.Expires = time.Now()
+	c.String(http.StatusOK, "Başarılı bir şekilde çıkış yapıldı")
+	return nil
+}*/

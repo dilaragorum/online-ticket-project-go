@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/dilaragorum/online-ticket-project-go/model"
@@ -12,10 +13,12 @@ import (
 var (
 	ErrDBDuplicatedEmail    = errors.New(`ERROR: duplicate key value violates unique constraint "idx_users_email" (SQLSTATE 23505)`)
 	ErrDBDuplicatedUserName = errors.New(`ERROR: duplicate key value violates unique constraint "users_user_name_key" (SQLSTATE 23505)`)
+	ErrDBNoRecord           = errors.New("there is no record in DB with that username")
 )
 
 type Repository interface {
 	Register(ctx context.Context, user *model.User) (*model.User, error)
+	FindUser(ctx context.Context, username string) (*model.User, error)
 }
 
 type DefaultRepository struct {
@@ -26,6 +29,21 @@ func NewDefaultRepository(database *gorm.DB) *DefaultRepository {
 	return &DefaultRepository{
 		database: database,
 	}
+}
+
+func (r *DefaultRepository) FindUser(ctx context.Context, username string) (*model.User, error) {
+	user := model.User{}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+	defer cancel()
+
+	if err := r.database.WithContext(timeoutCtx).Model(&user).First(&user, "user_name = ?", username).Error; err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrDBNoRecord
+		}
+	}
+
+	return &user, nil
 }
 
 func (r *DefaultRepository) Register(ctx context.Context, user *model.User) (*model.User, error) {
