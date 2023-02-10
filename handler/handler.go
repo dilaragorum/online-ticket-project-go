@@ -31,6 +31,7 @@ func NewDefaultOnlineTicketHandler(e *echo.Echo, service service.Service) *Defau
 	ot := DefaultHandler{service: service}
 	e.POST("/register", ot.Register)
 	e.POST("/login", ot.LogIn)
+	e.GET("logout", ot.LogOut)
 	return &DefaultHandler{}
 }
 
@@ -84,6 +85,8 @@ func (ot *DefaultHandler) LogIn(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, WarnInternalServerError)
 	}
 
+	// Declare the expiration time of the token
+	// here, we have kept it as 5 minutes
 	expitationTime := &jwt.NumericDate{Time: time.Now().Add(5 * time.Minute)}
 	claims := model.Claims{
 		Username: user.UserName,
@@ -93,12 +96,17 @@ func (ot *DefaultHandler) LogIn(c echo.Context) error {
 		},
 	}
 
+	// Declare the token with the algorithm used for signing, and the claims
+	// Header(algorithm + JWT) + Payload(Claim)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	// Create the JWT string = secretkey + Header + Claim
 	tokenString, err := token.SignedString([]byte("jwtKey")) //ToDo: Burada key farklı şekilde ver.
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	// Finally, we set the client cookie for "token" as the JWT we just generated
+	// we also set an expiry time which is the same as the token itself
 	cookie := new(http.Cookie)
 	cookie.Name = "token"
 	cookie.Value = tokenString
@@ -108,62 +116,9 @@ func (ot *DefaultHandler) LogIn(c echo.Context) error {
 	return c.String(http.StatusOK, SuccessLoginMessage)
 }
 
-/*func signIn(c echo.Context) error {
-	var credentials Credentials
-	err := json.NewDecoder(c.Request().Body).Decode(&credentials)
-	if err != nil {
-		c.NoContent(http.StatusBadRequest)
-		return err
-	}
-
-	// Map tuttuğumuz için buradan kontrol ediyoruz. Diğer durumda Database'e sormak gerekiyor.
-	expectedPassword, ok := users[credentials.UserName]
-
-	// Bu user var mı var ise girdiği password doğru mu
-	if !ok || expectedPassword != credentials.Password {
-		c.NoContent(http.StatusUnauthorized)
-		return nil
-	}
-
-	// Declare the expiration time of the token
-	// here, we have kept it as 5 minutes
-
-	expirationTime := &jwt.NumericDate{Time: time.Now().Add(5 * time.Minute)}
-	claims := Claims{
-		Username: credentials.UserName,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: expirationTime,
-		},
-	}
-
-	// Declare the token with the algorithm used for signing, and the claims
-	// Header(algorithm + JWT) + Payload(Claim)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Create the JWT string = secretkey + Header + Claim
-	tokenString, err := token.SignedString(jwtKey)
-	if err != nil {
-		c.NoContent(http.StatusInternalServerError)
-		return err
-	}
-
-	// Finally, we set the client cookie for "token" as the JWT we just generated
-	// we also set an expiry time which is the same as the token itself
-
-	cookie := new(http.Cookie)
-	cookie.Name = "token"
-	cookie.Value = tokenString
-	cookie.Expires = expirationTime.Time
-	c.SetCookie(cookie)
-
-	c.String(http.StatusOK, "Başarılı bir şekilde giriş yapıldı")
-	return nil
-}
-
-func logOut(c echo.Context) error {
+func (ot *DefaultHandler) LogOut(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = "token"
 	cookie.Expires = time.Now()
-	c.String(http.StatusOK, "Başarılı bir şekilde çıkış yapıldı")
-	return nil
-}*/
+	return c.String(http.StatusOK, "You have successfully logout")
+}
