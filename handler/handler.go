@@ -12,6 +12,9 @@ var (
 	WarnMessageWhenUserNameIsNotUnique = "This username was taken before"
 	WarnMessageWhenEmailIsNotUnique    = "This email has already been registered"
 	WarnInternalServerError            = "an error occurred please try again later"
+	WarnEmptyUserName                  = "Username cannot be empty"
+	WarnValidEmail                     = "Please enter valid email address"
+	WarnPasswordLength                 = "Password should be eight or more characters"
 )
 
 type DefaultHandler struct {
@@ -32,15 +35,15 @@ func (ot *DefaultHandler) Register(c echo.Context) error {
 	}
 
 	if len(user.UserName) == 0 {
-		return c.String(http.StatusBadRequest, "Username cannot be empty ")
+		return c.String(http.StatusBadRequest, WarnEmptyUserName)
 	}
 
 	if !strings.Contains(user.Email, "@") {
-		return c.String(http.StatusBadRequest, "Please enter valid email address")
+		return c.String(http.StatusBadRequest, WarnValidEmail)
 	}
 
 	if len(user.Password) < 8 {
-		return c.String(http.StatusBadRequest, "Password should be eight or more characters ")
+		return c.String(http.StatusBadRequest, WarnPasswordLength)
 	}
 
 	register, err := ot.service.Register(c.Request().Context(), user)
