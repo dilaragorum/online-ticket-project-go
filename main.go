@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/dilaragorum/online-ticket-project-go/client"
 	"github.com/dilaragorum/online-ticket-project-go/database"
 	"github.com/dilaragorum/online-ticket-project-go/handler"
 	"github.com/dilaragorum/online-ticket-project-go/repository"
@@ -35,11 +36,15 @@ func main() {
 	}
 	database.Migrate()
 
-	onlineTicketRepo := repository.NewDefaultRepository(connectionPool)
-	onlineTicketService := service.NewDefaultService(onlineTicketRepo)
-	handler.NewDefaultOnlineTicketHandler(e, onlineTicketService)
+	onlineTicketRepo := repository.NewUserRepository(connectionPool)
+	onlineTicketService := service.NewUserService(onlineTicketRepo)
 
-	//e.POST("/logout", logOut)
+	mailClient := client.NewMail()
+	mailRepository := repository.NewNotificationRepository(connectionPool)
+	mailService := service.NewMailService(mailClient, mailRepository)
+
+	handler.NewUserHandler(e, onlineTicketService, mailService)
+
 	e.Logger.Fatal(e.Start(":8080"))
 
 }

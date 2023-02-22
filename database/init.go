@@ -35,6 +35,6 @@ func Setup() (*gorm.DB, error) {
 }
 
 func Migrate() {
-	err := db.AutoMigrate(&model.User{})
+	err := db.AutoMigrate(&model.User{}, &model.NotificationLog{})
 	fmt.Println(err)
 }

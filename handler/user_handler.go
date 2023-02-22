@@ -1,13 +1,13 @@
 package handler
 
 import (
-	"encoding/json"
+	"errors"
 	"github.com/dilaragorum/online-ticket-project-go/model"
 	"github.com/dilaragorum/online-ticket-project-go/service"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"net/http"
-	"strings"
+	"os"
 	"time"
 )
 
@@ -17,72 +17,96 @@ var (
 	WarnInternalServerError            = "an error occurred please try again later"
 	WarnEmptyUserName                  = "Username cannot be empty"
 	WarnNonValidEmail                  = "Please enter valid email address"
-	WarnPasswordLength                 = "Password should be eight or more characters"
+	WarnPasswordLength                 = "Password should be between 5 and 12 characters"
 	WarnNonValidCredentials            = "Please enter valid username or password"
 	WarnWhenUsernameNotFound           = "Invalid username, please enter valid user name"
+	WarnEmailCannotSend                = "Email could not be sent"
 	SuccessLoginMessage                = "Congratulations, you have successfully logged into the system."
 )
 
-type DefaultHandler struct {
-	service service.Service
+type UserHandler struct {
+	userService service.UserService
+	mailService service.MailService
+	JwtKey      string
 }
 
-func NewDefaultOnlineTicketHandler(e *echo.Echo, service service.Service) *DefaultHandler {
-	ot := DefaultHandler{service: service}
-	e.POST("/register", ot.Register)
-	e.POST("/login", ot.LogIn)
-	e.GET("logout", ot.LogOut)
-	return &DefaultHandler{}
+func NewUserHandler(e *echo.Echo, userService service.UserService, mailService service.MailService) *UserHandler {
+	h := UserHandler{
+		userService: userService,
+		mailService: mailService,
+		JwtKey:      os.Getenv("ONLINE_TICKET_GO_JWTKEY"),
+	}
+
+	e.POST("/register", h.Register)
+	e.POST("/login", h.Login)
+	e.GET("/logout", h.Logout)
+
+	return &h
 }
 
-func (ot *DefaultHandler) Register(c echo.Context) error {
+func (h *UserHandler) Register(c echo.Context) error {
 	user := new(model.User)
 
 	if err := c.Bind(&user); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 
-	if len(user.UserName) == 0 {
+	if user.IsNameEmpty() {
 		return c.String(http.StatusBadRequest, WarnEmptyUserName)
 	}
 
-	if !strings.Contains(user.Email, "@") {
+	if user.IsEmailInvalid() {
 		return c.String(http.StatusBadRequest, WarnNonValidEmail)
 	}
 
-	if len(user.Password) < 8 {
+	if user.IsPasswordInvalid() {
 		return c.String(http.StatusBadRequest, WarnPasswordLength)
 	}
 
-	register, err := ot.service.Register(c.Request().Context(), user)
+	password, err := user.HashPassword()
 	if err != nil {
-		switch err.Error() {
-		case service.ErrDuplicatedEmail.Error():
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	user.Password = password
+
+	requestCtx := c.Request().Context()
+
+	err = h.userService.Register(requestCtx, user)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrDuplicatedEmail):
 			return c.String(http.StatusBadRequest, WarnMessageWhenEmailIsNotUnique)
-		case service.ErrDuplicatedUserName.Error():
+		case errors.Is(err, service.ErrDuplicatedUserName):
 			return c.String(http.StatusBadRequest, WarnMessageWhenUserNameIsNotUnique)
 		default:
 			return c.String(http.StatusInternalServerError, WarnInternalServerError)
 		}
 	}
 
-	return c.JSON(http.StatusCreated, register)
+	err = h.mailService.SendWelcomeMail(requestCtx, user.Email)
+	if errors.Is(err, service.MailCanNotSent) {
+		return c.String(http.StatusInternalServerError, WarnEmailCannotSend)
+	}
+
+	return c.NoContent(http.StatusCreated)
 }
-func (ot *DefaultHandler) LogIn(c echo.Context) error {
+
+func (h *UserHandler) Login(c echo.Context) error {
 	var credentials model.Credentials
-	err := json.NewDecoder(c.Request().Body).Decode(&credentials)
-	if err != nil {
+	if err := c.Bind(&credentials); err != nil {
 		return c.String(http.StatusBadRequest, WarnNonValidCredentials)
 	}
 
-	user, err := ot.service.LogIn(c.Request().Context(), credentials)
+	user, err := h.userService.Login(c.Request().Context(), credentials)
 	if err != nil {
-		if err.Error() == service.ErrUsernameNotFound.Error() {
+		switch {
+		case errors.Is(err, service.ErrUsernameNotFound):
 			return c.String(http.StatusNotFound, WarnWhenUsernameNotFound)
-		} else if err.Error() == service.ErrUsernameOrPasswordInvalid.Error() {
+		case errors.Is(err, service.ErrUsernameOrPasswordInvalid):
 			return c.String(http.StatusUnauthorized, WarnNonValidCredentials)
+		default:
+			return c.String(http.StatusInternalServerError, WarnInternalServerError)
 		}
-		return c.String(http.StatusInternalServerError, WarnInternalServerError)
 	}
 
 	// Declare the expiration time of the token
@@ -100,7 +124,8 @@ func (ot *DefaultHandler) LogIn(c echo.Context) error {
 	// Header(algorithm + JWT) + Payload(Claim)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	// Create the JWT string = secretkey + Header + Claim
-	tokenString, err := token.SignedString([]byte("jwtKey")) //ToDo: Burada key farklı şekilde ver.
+
+	tokenString, err := token.SignedString([]byte(h.JwtKey))
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -116,7 +141,7 @@ func (ot *DefaultHandler) LogIn(c echo.Context) error {
 	return c.String(http.StatusOK, SuccessLoginMessage)
 }
 
-func (ot *DefaultHandler) LogOut(c echo.Context) error {
+func (h *UserHandler) Logout(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = "token"
 	cookie.Expires = time.Now()
