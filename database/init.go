@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"github.com/dilaragorum/online-ticket-project-go/model"
+	"github.com/labstack/gommon/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"os"
@@ -35,6 +36,7 @@ func Setup() (*gorm.DB, error) {
 }
 
 func Migrate() {
-	err := db.AutoMigrate(&model.User{}, &model.NotificationLog{})
-	fmt.Println(err)
+	if err := db.AutoMigrate(&model.User{}, &model.NotificationLog{}, &model.Trip{}); err != nil {
+		log.Error(err)
+	}
 }

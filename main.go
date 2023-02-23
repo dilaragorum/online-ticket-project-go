@@ -45,6 +45,10 @@ func main() {
 
 	handler.NewUserHandler(e, onlineTicketService, mailService)
 
+	adminRepository := repository.NewAdminRepository(connectionPool)
+	adminService := service.NewAdminService(adminRepository)
+	handler.NewAdminHandler(e, adminService)
+
 	e.Logger.Fatal(e.Start(":8080"))
 
 }

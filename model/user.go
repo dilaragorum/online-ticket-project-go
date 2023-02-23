@@ -10,10 +10,13 @@ import (
 type Channel string
 
 const (
-	ChannelSMS     Channel = "SMS"
-	ChannelEMAIL   Channel = "EMAIL"
-	MinPasswordLen int     = 5
-	MaxPasswordLen int     = 12
+	ChannelSMS   Channel = "SMS"
+	ChannelEMAIL Channel = "EMAIL"
+)
+
+const (
+	MinPasswordLen int = 5
+	MaxPasswordLen int = 12
 )
 
 type NotificationLog struct {
@@ -29,7 +32,7 @@ type User struct {
 	ID        uint   `gorm:"primarykey"`
 	UserName  string `gorm:"not null;unique" json:"user_name"`
 	Password  string `gorm:"not null" json:"password"`
-	UserType  string `gorm:"check: user_type in('admin','user')" json:"user_type""`
+	UserType  string `gorm:"check: user_type in('admin','user')" json:"user_type"`
 	Email     string `gorm:"unique" json:"email"`
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -24,14 +24,14 @@ var (
 	SuccessLoginMessage                = "Congratulations, you have successfully logged into the system."
 )
 
-type UserHandler struct {
+type userHandler struct {
 	userService service.UserService
 	mailService service.MailService
 	JwtKey      string
 }
 
-func NewUserHandler(e *echo.Echo, userService service.UserService, mailService service.MailService) *UserHandler {
-	h := UserHandler{
+func NewUserHandler(e *echo.Echo, userService service.UserService, mailService service.MailService) *userHandler {
+	h := userHandler{
 		userService: userService,
 		mailService: mailService,
 		JwtKey:      os.Getenv("ONLINE_TICKET_GO_JWTKEY"),
@@ -44,7 +44,7 @@ func NewUserHandler(e *echo.Echo, userService service.UserService, mailService s
 	return &h
 }
 
-func (h *UserHandler) Register(c echo.Context) error {
+func (h *userHandler) Register(c echo.Context) error {
 	user := new(model.User)
 
 	if err := c.Bind(&user); err != nil {
@@ -91,7 +91,7 @@ func (h *UserHandler) Register(c echo.Context) error {
 	return c.NoContent(http.StatusCreated)
 }
 
-func (h *UserHandler) Login(c echo.Context) error {
+func (h *userHandler) Login(c echo.Context) error {
 	var credentials model.Credentials
 	if err := c.Bind(&credentials); err != nil {
 		return c.String(http.StatusBadRequest, WarnNonValidCredentials)
@@ -141,7 +141,7 @@ func (h *UserHandler) Login(c echo.Context) error {
 	return c.String(http.StatusOK, SuccessLoginMessage)
 }
 
-func (h *UserHandler) Logout(c echo.Context) error {
+func (h *userHandler) Logout(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = "token"
 	cookie.Expires = time.Now()
