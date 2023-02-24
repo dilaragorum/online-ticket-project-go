@@ -8,6 +8,7 @@ import (
 	"github.com/dilaragorum/online-ticket-project-go/service"
 	"github.com/labstack/echo/v4"
 	"log"
+	"os"
 )
 
 /*var jwtKey = []byte("my_secret_key")
@@ -36,19 +37,22 @@ func main() {
 	}
 	database.Migrate()
 
-	onlineTicketRepo := repository.NewUserRepository(connectionPool)
-	onlineTicketService := service.NewUserService(onlineTicketRepo)
+	jwtSecretKey := os.Getenv("ONLINE_TICKET_GO_JWTKEY")
 
+	// MAIL
 	mailClient := client.NewMail()
 	mailRepository := repository.NewNotificationRepository(connectionPool)
 	mailService := service.NewMailService(mailClient, mailRepository)
 
-	handler.NewUserHandler(e, onlineTicketService, mailService)
+	// USER
+	userRepository := repository.NewUserRepository(connectionPool)
+	userService := service.NewUserService(userRepository)
+	handler.NewUserHandler(e, userService, mailService, jwtSecretKey)
 
-	adminRepository := repository.NewAdminRepository(connectionPool)
+	// ADMIN
+	adminRepository := repository.NewTripRepository(connectionPool)
 	adminService := service.NewAdminService(adminRepository)
-	handler.NewAdminHandler(e, adminService)
+	handler.NewAdminHandler(e, adminService, jwtSecretKey)
 
 	e.Logger.Fatal(e.Start(":8080"))
-
 }

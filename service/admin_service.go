@@ -9,24 +9,38 @@ import (
 
 var (
 	ErrAlreadyCreatedTrip = errors.New("this trip is already created")
+	ErrTripNotExist       = errors.New("this trip does not exist")
 )
 
 type AdminService interface {
 	CreateTrip(ctx context.Context, trip *model.Trip) error
+	CancelTrip(ctx context.Context, id int) error
 }
 
 type adminService struct {
-	adminRepo repository.AdminRepository
+	tripRepo repository.TripRepository
 }
 
-func NewAdminService(adminRepo repository.AdminRepository) *adminService {
-	return &adminService{adminRepo: adminRepo}
+func NewAdminService(tripRepo repository.TripRepository) *adminService {
+	return &adminService{tripRepo: tripRepo}
 }
 
 func (as *adminService) CreateTrip(ctx context.Context, trip *model.Trip) error {
-	if err := as.adminRepo.CreateTrip(ctx, trip); err != nil {
+	if err := as.tripRepo.Create(ctx, trip); err != nil {
 		if errors.Is(err, repository.ErrDuplicateIdx) {
 			return ErrAlreadyCreatedTrip
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (as *adminService) CancelTrip(ctx context.Context, id int) error {
+	if err := as.tripRepo.Delete(ctx, id); err != nil {
+		switch {
+		case errors.Is(err, repository.ErrTripNotFound):
+			return ErrTripNotExist
 		}
 		return err
 	}

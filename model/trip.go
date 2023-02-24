@@ -17,6 +17,7 @@ const (
 )
 
 type Trip struct {
+	ID              int       `gorm:"primaryKey" json:"id"`
 	From            string    `gorm:"not null;index:,unique,composite:idx_member" json:"from"`
 	To              string    `gorm:"not null;index:,unique,composite:idx_member" json:"to"`
 	Vehicle         Vehicle   `gorm:"not null;index:,unique,composite:idx_member" json:"vehicle"`
@@ -42,6 +43,10 @@ func (t *Trip) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+func (t *Trip) CheckFieldsEmpty() bool {
+	return t.IsStartingPlaceEmpty() || t.IsDestinationPlaceEmpty() || t.IsDateEmpty()
+}
+
 func (t *Trip) IsStartingPlaceEmpty() bool {
 	return t.From == ""
 }
@@ -61,10 +66,18 @@ func (t *Trip) IsDateEmpty() bool {
 	return t.Date.IsZero()
 }
 
-func (t *Trip) IsNotValidPrice() bool {
+func (t *Trip) IsInvalidPrice() bool {
 	return !t.IsValidPrice()
 }
 
 func (t *Trip) IsValidPrice() bool {
 	return t.Price >= 0
+}
+
+func IsInvalidID(id int) bool {
+	return !IsValidID(id)
+}
+
+func IsValidID(id int) bool {
+	return id > 0
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -25,16 +24,16 @@ var (
 )
 
 type userHandler struct {
-	userService service.UserService
-	mailService service.MailService
-	JwtKey      string
+	userService  service.UserService
+	mailService  service.MailService
+	JwtSecretKey string
 }
 
-func NewUserHandler(e *echo.Echo, userService service.UserService, mailService service.MailService) *userHandler {
+func NewUserHandler(e *echo.Echo, userService service.UserService, mailService service.MailService, jwtSecretKey string) *userHandler {
 	h := userHandler{
-		userService: userService,
-		mailService: mailService,
-		JwtKey:      os.Getenv("ONLINE_TICKET_GO_JWTKEY"),
+		userService:  userService,
+		mailService:  mailService,
+		JwtSecretKey: jwtSecretKey,
 	}
 
 	e.POST("/register", h.Register)
@@ -111,10 +110,10 @@ func (h *userHandler) Login(c echo.Context) error {
 
 	// Declare the expiration time of the token
 	// here, we have kept it as 5 minutes
-	expitationTime := &jwt.NumericDate{Time: time.Now().Add(5 * time.Minute)}
+	expitationTime := &jwt.NumericDate{Time: time.Now().Add(time.Hour)}
 	claims := model.Claims{
-		Username: user.UserName,
-		UserType: user.UserType,
+		Username:          user.UserName,
+		AuthorizationType: user.AuthorizationType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: expitationTime,
 		},
@@ -125,7 +124,7 @@ func (h *userHandler) Login(c echo.Context) error {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	// Create the JWT string = secretkey + Header + Claim
 
-	tokenString, err := token.SignedString([]byte(h.JwtKey))
+	tokenString, err := token.SignedString([]byte(h.JwtSecretKey))
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
