@@ -1,10 +1,9 @@
-package service
+package admin
 
 import (
 	"context"
 	"errors"
-	"github.com/dilaragorum/online-ticket-project-go/model"
-	"github.com/dilaragorum/online-ticket-project-go/repository"
+	"github.com/dilaragorum/online-ticket-project-go/internal/trip"
 )
 
 var (
@@ -13,21 +12,21 @@ var (
 )
 
 type AdminService interface {
-	CreateTrip(ctx context.Context, trip *model.Trip) error
+	CreateTrip(ctx context.Context, trip *trip.Trip) error
 	CancelTrip(ctx context.Context, id int) error
 }
 
 type adminService struct {
-	tripRepo repository.TripRepository
+	tripRepo trip.Repository
 }
 
-func NewAdminService(tripRepo repository.TripRepository) *adminService {
+func NewAdminService(tripRepo trip.Repository) *adminService {
 	return &adminService{tripRepo: tripRepo}
 }
 
-func (as *adminService) CreateTrip(ctx context.Context, trip *model.Trip) error {
-	if err := as.tripRepo.Create(ctx, trip); err != nil {
-		if errors.Is(err, repository.ErrDuplicateIdx) {
+func (as *adminService) CreateTrip(ctx context.Context, t *trip.Trip) error {
+	if err := as.tripRepo.Create(ctx, t); err != nil {
+		if errors.Is(err, trip.ErrDuplicateIdx) {
 			return ErrAlreadyCreatedTrip
 		}
 		return err
@@ -39,7 +38,7 @@ func (as *adminService) CreateTrip(ctx context.Context, trip *model.Trip) error 
 func (as *adminService) CancelTrip(ctx context.Context, id int) error {
 	if err := as.tripRepo.Delete(ctx, id); err != nil {
 		switch {
-		case errors.Is(err, repository.ErrTripNotFound):
+		case errors.Is(err, trip.ErrTripNotFound):
 			return ErrTripNotExist
 		}
 		return err

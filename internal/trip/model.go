@@ -1,6 +1,7 @@
-package model
+package trip
 
 import (
+	"github.com/dilaragorum/online-ticket-project-go/internal/ticket"
 	"gorm.io/gorm"
 	"time"
 )
@@ -16,6 +17,13 @@ const (
 	DefaultCapacity  = 0
 )
 
+type Filter struct {
+	From    string    `json:"from"`
+	To      string    `json:"to"`
+	Vehicle Vehicle   `json:"vehicle"`
+	Date    time.Time `json:"date"`
+}
+
 type Trip struct {
 	ID              int       `gorm:"primaryKey" json:"id"`
 	From            string    `gorm:"not null;index:,unique,composite:idx_member" json:"from"`
@@ -25,6 +33,7 @@ type Trip struct {
 	ArrivalDuration string    `json:"arrival_duration"`
 	Capacity        int       `gorm:"not null" json:"capacity"`
 	Price           float64   `gorm:"not null;check:price>0" json:"price"`
+	Tickets         []ticket.Ticket
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	DeletedAt       gorm.DeletedAt `gorm:"index"`
@@ -58,6 +67,7 @@ func (t *Trip) IsDestinationPlaceEmpty() bool {
 func (t *Trip) IsInvalidVehicle() bool {
 	return !t.IsValidVehicle()
 }
+
 func (t *Trip) IsValidVehicle() bool {
 	return t.Vehicle == VehicleFlight || t.Vehicle == VehicleBus
 }

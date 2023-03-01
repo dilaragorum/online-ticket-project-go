@@ -1,9 +1,9 @@
-package handler
+package user
 
 import (
 	"errors"
-	"github.com/dilaragorum/online-ticket-project-go/model"
-	"github.com/dilaragorum/online-ticket-project-go/service"
+	"github.com/dilaragorum/online-ticket-project-go/internal/aut"
+	"github.com/dilaragorum/online-ticket-project-go/internal/mail"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -11,30 +11,33 @@ import (
 )
 
 var (
-	WarnMessageWhenUserNameIsNotUnique = "This username was taken before"
-	WarnMessageWhenEmailIsNotUnique    = "This email has already been registered"
-	WarnInternalServerError            = "an error occurred please try again later"
-	WarnEmptyUserName                  = "Username cannot be empty"
-	WarnNonValidEmail                  = "Please enter valid email address"
-	WarnPasswordLength                 = "Password should be between 5 and 12 characters"
-	WarnNonValidCredentials            = "Please enter valid username or password"
-	WarnWhenUsernameNotFound           = "Invalid username, please enter valid user name"
-	WarnEmailCannotSend                = "Email could not be sent"
-	SuccessLoginMessage                = "Congratulations, you have successfully logged into the system."
+	WarnWhenEmailOrUsernameIsNotUnique = "This email or username has already been registered"
+
+	WarnInternalServerError = "an error occurred please try again later"
+	WarnEmptyUserName       = "Username cannot be empty"
+	WarnNonValidEmail       = "Please enter valid email address"
+	WarnPasswordLength      = "Password should be between 5 and 12 characters"
+
+	WarnNonValidCredentials  = "Please enter valid username or password"
+	WarnWhenUsernameNotFound = "Invalid username, please enter valid user name"
+	WarnEmailCannotSend      = "Email could not be sent"
+	SuccessLoginMessage      = "Congratulations, you have successfully logged into the system."
 )
 
-type userHandler struct {
-	userService  service.UserService
-	mailService  service.MailService
+type handler struct {
+	userService  Service
+	mailService  mail.Service
 	JwtSecretKey string
 }
 
-func NewUserHandler(e *echo.Echo, userService service.UserService, mailService service.MailService, jwtSecretKey string) *userHandler {
-	h := userHandler{
+func NewHandler(e *echo.Echo, userService Service, mailService mail.Service, jwtSecretKey string) *handler {
+	h := handler{
 		userService:  userService,
 		mailService:  mailService,
 		JwtSecretKey: jwtSecretKey,
 	}
+
+	//user := e.Group("/user", h.userMiddleware)
 
 	e.POST("/register", h.Register)
 	e.POST("/login", h.Login)
@@ -43,8 +46,8 @@ func NewUserHandler(e *echo.Echo, userService service.UserService, mailService s
 	return &h
 }
 
-func (h *userHandler) Register(c echo.Context) error {
-	user := new(model.User)
+func (h *handler) Register(c echo.Context) error {
+	user := new(User)
 
 	if err := c.Bind(&user); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
@@ -73,25 +76,23 @@ func (h *userHandler) Register(c echo.Context) error {
 	err = h.userService.Register(requestCtx, user)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrDuplicatedEmail):
-			return c.String(http.StatusBadRequest, WarnMessageWhenEmailIsNotUnique)
-		case errors.Is(err, service.ErrDuplicatedUserName):
-			return c.String(http.StatusBadRequest, WarnMessageWhenUserNameIsNotUnique)
+		case errors.Is(err, ErrDuplicatedValue):
+			return c.String(http.StatusBadRequest, WarnWhenEmailOrUsernameIsNotUnique)
 		default:
 			return c.String(http.StatusInternalServerError, WarnInternalServerError)
 		}
 	}
 
 	err = h.mailService.SendWelcomeMail(requestCtx, user.Email)
-	if errors.Is(err, service.MailCanNotSent) {
+	if errors.Is(err, mail.MailCanNotSent) {
 		return c.String(http.StatusInternalServerError, WarnEmailCannotSend)
 	}
 
 	return c.NoContent(http.StatusCreated)
 }
 
-func (h *userHandler) Login(c echo.Context) error {
-	var credentials model.Credentials
+func (h *handler) Login(c echo.Context) error {
+	var credentials aut.Credentials
 	if err := c.Bind(&credentials); err != nil {
 		return c.String(http.StatusBadRequest, WarnNonValidCredentials)
 	}
@@ -99,9 +100,9 @@ func (h *userHandler) Login(c echo.Context) error {
 	user, err := h.userService.Login(c.Request().Context(), credentials)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrUsernameNotFound):
+		case errors.Is(err, ErrUsernameNotFound):
 			return c.String(http.StatusNotFound, WarnWhenUsernameNotFound)
-		case errors.Is(err, service.ErrUsernameOrPasswordInvalid):
+		case errors.Is(err, ErrUsernameOrPasswordInvalid):
 			return c.String(http.StatusUnauthorized, WarnNonValidCredentials)
 		default:
 			return c.String(http.StatusInternalServerError, WarnInternalServerError)
@@ -110,12 +111,12 @@ func (h *userHandler) Login(c echo.Context) error {
 
 	// Declare the expiration time of the token
 	// here, we have kept it as 5 minutes
-	expitationTime := &jwt.NumericDate{Time: time.Now().Add(time.Hour)}
-	claims := model.Claims{
+	expirationTime := &jwt.NumericDate{Time: time.Now().Add(time.Hour)}
+	claims := aut.Claims{
 		Username:          user.UserName,
 		AuthorizationType: user.AuthorizationType,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: expitationTime,
+			ExpiresAt: expirationTime,
 		},
 	}
 
@@ -134,15 +135,16 @@ func (h *userHandler) Login(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = "token"
 	cookie.Value = tokenString
-	cookie.Expires = expitationTime.Time
+	cookie.Expires = expirationTime.Time
 	c.SetCookie(cookie)
 
 	return c.String(http.StatusOK, SuccessLoginMessage)
 }
 
-func (h *userHandler) Logout(c echo.Context) error {
+func (h *handler) Logout(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = "token"
 	cookie.Expires = time.Now()
 	return c.String(http.StatusOK, "You have successfully logout")
 }
+

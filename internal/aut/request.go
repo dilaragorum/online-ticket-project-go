@@ -1,4 +1,4 @@
-package model
+package aut
 
 type Credentials struct {
 	Password string `json:"password"`

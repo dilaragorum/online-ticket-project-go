@@ -1,9 +1,9 @@
-package handler
+package admin
 
 import (
 	"errors"
-	"github.com/dilaragorum/online-ticket-project-go/model"
-	"github.com/dilaragorum/online-ticket-project-go/service"
+	"github.com/dilaragorum/online-ticket-project-go/internal/aut"
+	model2 "github.com/dilaragorum/online-ticket-project-go/internal/trip"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -22,12 +22,12 @@ const (
 	WarnMessageWhenTripNotExistForDelete = "This trip does not exist or it is deleted already. "
 )
 
-type adminHandler struct {
-	adminService service.AdminService
+type handler struct {
+	adminService AdminService
 	jwtSecretKey string
 }
 
-func (ah *adminHandler) adminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+func (ah *handler) adminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		cookie, err := c.Cookie("token")
 		if err != nil {
@@ -36,7 +36,7 @@ func (ah *adminHandler) adminMiddleware(next echo.HandlerFunc) echo.HandlerFunc 
 
 		token := cookie.Value
 
-		claim := model.Claims{}
+		claim := aut.Claims{}
 		parsedTokenInfo, err := jwt.ParseWithClaims(token, &claim, func(token *jwt.Token) (interface{}, error) {
 			return []byte(ah.jwtSecretKey), nil
 		})
@@ -60,8 +60,8 @@ func (ah *adminHandler) adminMiddleware(next echo.HandlerFunc) echo.HandlerFunc 
 	}
 }
 
-func NewAdminHandler(e *echo.Echo, adminService service.AdminService, jwtSecretKey string) *adminHandler {
-	ah := adminHandler{adminService: adminService, jwtSecretKey: jwtSecretKey}
+func NewHandler(e *echo.Echo, adminService AdminService, jwtSecretKey string) *handler {
+	ah := handler{adminService: adminService, jwtSecretKey: jwtSecretKey}
 
 	admin := e.Group("/admin", ah.adminMiddleware)
 
@@ -71,8 +71,8 @@ func NewAdminHandler(e *echo.Echo, adminService service.AdminService, jwtSecretK
 	return &ah
 }
 
-func (ah *adminHandler) CreateTrip(c echo.Context) error {
-	trip := new(model.Trip)
+func (ah *handler) CreateTrip(c echo.Context) error {
+	trip := new(model2.Trip)
 	if err := c.Bind(&trip); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
@@ -82,12 +82,12 @@ func (ah *adminHandler) CreateTrip(c echo.Context) error {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 
-	claims := model.Claims{}
+	claims := aut.Claims{}
 	jwt.ParseWithClaims(cookie.Value, &claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(ah.jwtSecretKey), nil
 	})
 
-	if claims.AuthorizationType != model.AuthAdmin {
+	if claims.AuthorizationType != aut.AuthAdmin {
 		return c.String(http.StatusForbidden, err.Error())
 	}
 
@@ -106,7 +106,7 @@ func (ah *adminHandler) CreateTrip(c echo.Context) error {
 	requestCtx := c.Request().Context()
 
 	if err := ah.adminService.CreateTrip(requestCtx, trip); err != nil {
-		if errors.Is(err, service.ErrAlreadyCreatedTrip) {
+		if errors.Is(err, ErrAlreadyCreatedTrip) {
 			return c.String(http.StatusBadRequest, WarnAlreadyCreatedTrip)
 		}
 		return c.String(http.StatusInternalServerError, WarnInternalError)
@@ -115,11 +115,11 @@ func (ah *adminHandler) CreateTrip(c echo.Context) error {
 	return c.NoContent(http.StatusCreated)
 }
 
-func (ah *adminHandler) CancelTrip(c echo.Context) error {
+func (ah *handler) CancelTrip(c echo.Context) error {
 	tripIDStr := c.Param("id")
 	tripID, _ := strconv.Atoi(tripIDStr)
 
-	if model.IsInvalidID(tripID) {
+	if model2.IsInvalidID(tripID) {
 		return c.String(http.StatusBadRequest, WarnMessageWhenInvalidID)
 	}
 
@@ -127,7 +127,7 @@ func (ah *adminHandler) CancelTrip(c echo.Context) error {
 
 	if err := ah.adminService.CancelTrip(requestCtx, tripID); err != nil {
 		switch {
-		case errors.Is(err, service.ErrTripNotExist):
+		case errors.Is(err, ErrTripNotExist):
 			return c.String(http.StatusBadRequest, WarnMessageWhenTripNotExistForDelete)
 		}
 		return c.String(http.StatusInternalServerError, WarnInternalError)
