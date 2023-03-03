@@ -20,17 +20,17 @@ type Repository interface {
 	GetByUserName(ctx context.Context, username string) (*User, error)
 }
 
-type repository struct {
+type defaultRepository struct {
 	database *gorm.DB
 }
 
 func NewRepository(database *gorm.DB) Repository {
-	return &repository{
+	return &defaultRepository{
 		database: database,
 	}
 }
 
-func (r *repository) GetByUserName(ctx context.Context, username string) (*User, error) {
+func (r *defaultRepository) GetByUserName(ctx context.Context, username string) (*User, error) {
 	user := User{}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -46,7 +46,7 @@ func (r *repository) GetByUserName(ctx context.Context, username string) (*User,
 	return &user, nil
 }
 
-func (r *repository) Create(ctx context.Context, user *User) error {
+func (r *defaultRepository) Create(ctx context.Context, user *User) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 

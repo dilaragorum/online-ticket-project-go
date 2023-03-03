@@ -12,18 +12,17 @@ type Service interface {
 	Purchase(ctx context.Context, ticket *Ticket) error
 }
 
-type service struct {
+type defaultService struct {
 	notificationService notification.Service
 	tripRepo            trip.Repository
 	payment             payment.Client
 }
 
-func NewService(notificationService notification.Service, tripRepo trip.Repository, payment payment.Client) *service {
-	return &service{notificationService: notificationService, tripRepo: tripRepo, payment: payment}
+func NewService(notificationService notification.Service, tripRepo trip.Repository, payment payment.Client) Service {
+	return &defaultService{notificationService: notificationService, tripRepo: tripRepo, payment: payment}
 }
 
-func (s *service) Purchase(ctx context.Context, ticket *Ticket) error {
-	//Ödeme İşlemi
+func (s *defaultService) Purchase(ctx context.Context, ticket *Ticket) error {
 	if err := s.payment.Transfer(); err != nil {
 		return err
 	}

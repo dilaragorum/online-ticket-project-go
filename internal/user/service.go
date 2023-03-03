@@ -20,15 +20,15 @@ type Service interface {
 	Login(ctx context.Context, credentials aut.Credentials) (*User, error)
 }
 
-type service struct {
+type defaultService struct {
 	userRepo Repository
 }
 
-func NewUserService(repository Repository) *service {
-	return &service{userRepo: repository}
+func NewUserService(repository Repository) Service {
+	return &defaultService{userRepo: repository}
 }
 
-func (s *service) Register(ctx context.Context, user *User) error {
+func (s *defaultService) Register(ctx context.Context, user *User) error {
 	err := s.userRepo.Create(ctx, user)
 	if err != nil {
 		switch {
@@ -41,7 +41,7 @@ func (s *service) Register(ctx context.Context, user *User) error {
 	return nil
 }
 
-func (s *service) Login(ctx context.Context, credentials aut.Credentials) (*User, error) {
+func (s *defaultService) Login(ctx context.Context, credentials aut.Credentials) (*User, error) {
 	user, err := s.userRepo.GetByUserName(ctx, credentials.UserName)
 	if err != nil {
 		if errors.Is(err, ErrNoRecord) {
@@ -57,11 +57,11 @@ func (s *service) Login(ctx context.Context, credentials aut.Credentials) (*User
 	return user, nil
 }
 
-func (s *service) isNotEqualHashAndPassword(hashPassword string, password string) bool {
+func (s *defaultService) isNotEqualHashAndPassword(hashPassword string, password string) bool {
 	return !s.isEqualHashAndPassword(hashPassword, password)
 }
 
-func (s *service) isEqualHashAndPassword(hashPassword string, password string) bool {
+func (s *defaultService) isEqualHashAndPassword(hashPassword string, password string) bool {
 	if err := bcrypt.CompareHashAndPassword([]byte(hashPassword), []byte(password)); err != nil {
 		return false
 	}

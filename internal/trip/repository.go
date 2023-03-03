@@ -21,15 +21,15 @@ type Repository interface {
 	FindByTripID(ctx context.Context, tripID int) (*Trip, error)
 }
 
-type repository struct {
+type defaultRepository struct {
 	database *gorm.DB
 }
 
 func NewTripRepository(database *gorm.DB) Repository {
-	return &repository{database: database}
+	return &defaultRepository{database: database}
 }
 
-func (t *repository) Create(ctx context.Context, trip *Trip) error {
+func (t *defaultRepository) Create(ctx context.Context, trip *Trip) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -45,7 +45,7 @@ func (t *repository) Create(ctx context.Context, trip *Trip) error {
 	return nil
 }
 
-func (t *repository) Delete(ctx context.Context, id int) error {
+func (t *defaultRepository) Delete(ctx context.Context, id int) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -62,7 +62,7 @@ func (t *repository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-func (t *repository) FindByFilter(ctx context.Context, filter *Filter) ([]Trip, error) {
+func (t *defaultRepository) FindByFilter(ctx context.Context, filter *Filter) ([]Trip, error) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -82,7 +82,7 @@ func (t *repository) FindByFilter(ctx context.Context, filter *Filter) ([]Trip, 
 	return trips, nil
 }
 
-func (t *repository) FindByTripID(ctx context.Context, tripID int) (*Trip, error) {
+func (t *defaultRepository) FindByTripID(ctx context.Context, tripID int) (*Trip, error) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
