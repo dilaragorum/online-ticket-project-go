@@ -8,9 +8,18 @@ import (
 type Channel string
 
 const (
-	ChannelSMS   Channel = "SMS"
-	ChannelEMAIL Channel = "EMAIL"
+	SMS   Channel = "sms"
+	Email Channel = "mail"
 )
+
+type Param struct {
+	Channel     Channel
+	To          string
+	From        string
+	Title       string
+	Description string
+	LogMsg      string
+}
 
 type Log struct {
 	ID        uint    `gorm:"primarykey"`

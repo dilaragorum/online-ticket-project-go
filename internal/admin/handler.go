@@ -23,7 +23,7 @@ const (
 )
 
 type handler struct {
-	adminService AdminService
+	adminService Service
 	jwtSecretKey string
 }
 
@@ -60,7 +60,7 @@ func (ah *handler) adminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func NewHandler(e *echo.Echo, adminService AdminService, jwtSecretKey string) *handler {
+func NewHandler(e *echo.Echo, adminService Service, jwtSecretKey string) *handler {
 	ah := handler{adminService: adminService, jwtSecretKey: jwtSecretKey}
 
 	admin := e.Group("/admin", ah.adminMiddleware)

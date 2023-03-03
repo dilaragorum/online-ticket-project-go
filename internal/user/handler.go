@@ -2,8 +2,9 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"github.com/dilaragorum/online-ticket-project-go/internal/aut"
-	"github.com/dilaragorum/online-ticket-project-go/internal/mail"
+	"github.com/dilaragorum/online-ticket-project-go/internal/notification"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -20,21 +21,21 @@ var (
 
 	WarnNonValidCredentials  = "Please enter valid username or password"
 	WarnWhenUsernameNotFound = "Invalid username, please enter valid user name"
-	WarnEmailCannotSend      = "Email could not be sent"
+	WarnEmailCouldNotSent    = "Email could not be sent"
 	SuccessLoginMessage      = "Congratulations, you have successfully logged into the system."
 )
 
 type handler struct {
-	userService  Service
-	mailService  mail.Service
-	JwtSecretKey string
+	userService         Service
+	notificationService notification.Service
+	JwtSecretKey        string
 }
 
-func NewHandler(e *echo.Echo, userService Service, mailService mail.Service, jwtSecretKey string) *handler {
+func NewHandler(e *echo.Echo, userService Service, notificationService notification.Service, jwtSecretKey string) *handler {
 	h := handler{
-		userService:  userService,
-		mailService:  mailService,
-		JwtSecretKey: jwtSecretKey,
+		userService:         userService,
+		notificationService: notificationService,
+		JwtSecretKey:        jwtSecretKey,
 	}
 
 	//user := e.Group("/user", h.userMiddleware)
@@ -83,9 +84,17 @@ func (h *handler) Register(c echo.Context) error {
 		}
 	}
 
-	err = h.mailService.SendWelcomeMail(requestCtx, user.Email)
-	if errors.Is(err, mail.MailCanNotSent) {
-		return c.String(http.StatusInternalServerError, WarnEmailCannotSend)
+	param := notification.Param{
+		Channel:     notification.Email,
+		To:          user.Email,
+		From:        "ticket@company.com",
+		Title:       "Welcome Mail",
+		Description: fmt.Sprintf("Dear %s, welcome to our platform", user.UserName),
+		LogMsg:      fmt.Sprintf("A welcome e-mail has been sent to %s, who has just registered.", user.Email),
+	}
+
+	if err = h.notificationService.Send(requestCtx, param); err != nil {
+		return c.String(http.StatusInternalServerError, WarnEmailCouldNotSent)
 	}
 
 	return c.NoContent(http.StatusCreated)
@@ -147,4 +156,3 @@ func (h *handler) Logout(c echo.Context) error {
 	cookie.Expires = time.Now()
 	return c.String(http.StatusOK, "You have successfully logout")
 }
-

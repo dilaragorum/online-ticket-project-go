@@ -1,7 +1,6 @@
 package trip
 
 import (
-	"github.com/dilaragorum/online-ticket-project-go/internal/ticket"
 	"gorm.io/gorm"
 	"time"
 )
@@ -18,6 +17,7 @@ const (
 )
 
 type Filter struct {
+	TripID  int       `json:"trip_id"`
 	From    string    `json:"from"`
 	To      string    `json:"to"`
 	Vehicle Vehicle   `json:"vehicle"`
@@ -33,7 +33,6 @@ type Trip struct {
 	ArrivalDuration string    `json:"arrival_duration"`
 	Capacity        int       `gorm:"not null" json:"capacity"`
 	Price           float64   `gorm:"not null;check:price>0" json:"price"`
-	Tickets         []ticket.Ticket
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	DeletedAt       gorm.DeletedAt `gorm:"index"`
