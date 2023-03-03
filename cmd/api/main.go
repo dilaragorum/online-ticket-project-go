@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/dilaragorum/online-ticket-project-go/client"
 	"github.com/dilaragorum/online-ticket-project-go/internal/admin"
 	"github.com/dilaragorum/online-ticket-project-go/internal/notification"
 	"github.com/dilaragorum/online-ticket-project-go/internal/ticket"
@@ -41,7 +42,11 @@ func main() {
 	adminService := admin.NewAdminService(adminRepository)
 	admin.NewHandler(e, adminService, jwtSecretKey)
 
-	service := ticket.NewService(notificationService, tripRepo)
+	//PAYMENT
+	paymentClient := client.NewPayment()
+
+	// TICKET
+	service := ticket.NewService(notificationService, tripRepo, paymentClient)
 	ticket.NewHandler(e, service)
 
 	e.Logger.Fatal(e.Start(":8080"))

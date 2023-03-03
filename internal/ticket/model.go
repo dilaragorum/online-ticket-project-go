@@ -17,6 +17,7 @@ const (
 type Ticket struct {
 	ID     int `gorm:"primaryKey" json:"id"`
 	TripID int `gorm:"not null" json:"trip_id"`
+	UserID int `gorm:"not null" json:"user_id"`
 	Passenger
 	CreatedAt time.Time
 	UpdatedAt time.Time
