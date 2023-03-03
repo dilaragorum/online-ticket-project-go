@@ -3,8 +3,8 @@ package ticket
 import (
 	"context"
 	"fmt"
-	"github.com/dilaragorum/online-ticket-project-go/client"
 	"github.com/dilaragorum/online-ticket-project-go/internal/notification"
+	"github.com/dilaragorum/online-ticket-project-go/internal/payment"
 	"github.com/dilaragorum/online-ticket-project-go/internal/trip"
 )
 
@@ -15,10 +15,10 @@ type Service interface {
 type service struct {
 	notificationService notification.Service
 	tripRepo            trip.Repository
-	payment             client.Payment
+	payment             payment.Client
 }
 
-func NewService(notificationService notification.Service, tripRepo trip.Repository, payment client.Payment) *service {
+func NewService(notificationService notification.Service, tripRepo trip.Repository, payment payment.Client) *service {
 	return &service{notificationService: notificationService, tripRepo: tripRepo, payment: payment}
 }
 

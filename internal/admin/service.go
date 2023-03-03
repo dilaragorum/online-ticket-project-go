@@ -16,15 +16,15 @@ type Service interface {
 	CancelTrip(ctx context.Context, id int) error
 }
 
-type service struct {
+type defaultService struct {
 	tripRepo trip.Repository
 }
 
-func NewAdminService(tripRepo trip.Repository) *service {
-	return &service{tripRepo: tripRepo}
+func NewAdminService(tripRepo trip.Repository) Service {
+	return &defaultService{tripRepo: tripRepo}
 }
 
-func (as *service) CreateTrip(ctx context.Context, t *trip.Trip) error {
+func (as *defaultService) CreateTrip(ctx context.Context, t *trip.Trip) error {
 	if err := as.tripRepo.Create(ctx, t); err != nil {
 		if errors.Is(err, trip.ErrDuplicateIdx) {
 			return ErrAlreadyCreatedTrip
@@ -35,7 +35,7 @@ func (as *service) CreateTrip(ctx context.Context, t *trip.Trip) error {
 	return nil
 }
 
-func (as *service) CancelTrip(ctx context.Context, id int) error {
+func (as *defaultService) CancelTrip(ctx context.Context, id int) error {
 	if err := as.tripRepo.Delete(ctx, id); err != nil {
 		switch {
 		case errors.Is(err, trip.ErrTripNotFound):

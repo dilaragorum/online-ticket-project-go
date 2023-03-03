@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/dilaragorum/online-ticket-project-go/client"
 	"github.com/dilaragorum/online-ticket-project-go/internal/admin"
 	"github.com/dilaragorum/online-ticket-project-go/internal/notification"
+	"github.com/dilaragorum/online-ticket-project-go/internal/payment"
 	"github.com/dilaragorum/online-ticket-project-go/internal/ticket"
 	"github.com/dilaragorum/online-ticket-project-go/internal/trip"
 	"github.com/dilaragorum/online-ticket-project-go/internal/user"
@@ -43,7 +43,7 @@ func main() {
 	admin.NewHandler(e, adminService, jwtSecretKey)
 
 	//PAYMENT
-	paymentClient := client.NewPayment()
+	paymentClient := payment.NewClient()
 
 	// TICKET
 	service := ticket.NewService(notificationService, tripRepo, paymentClient)
