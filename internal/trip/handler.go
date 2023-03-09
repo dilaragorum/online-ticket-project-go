@@ -35,6 +35,7 @@ func Handler(e *echo.Echo, tripService Service) *handler {
 	e.POST("/trips", h.CreateTrip, auth.AdminMiddleware)
 	e.DELETE("/trips/:id", h.CancelTrip, auth.AdminMiddleware)
 	e.GET("/trips/sold/:id", h.GetSoldTicketNumber, auth.AdminMiddleware)
+	e.GET("/trips/revenue/:id", h.GetTotalRevenueForSpecificTrip, auth.AdminMiddleware)
 
 	return &h
 }
@@ -109,12 +110,12 @@ func (t *handler) CancelTrip(c echo.Context) error {
 
 func (t *handler) GetSoldTicketNumber(c echo.Context) error {
 	p := c.Param("id")
-	param, err := strconv.Atoi(p)
+	id, err := strconv.Atoi(p)
 	if err != nil {
 		return c.String(http.StatusBadRequest, WarnMessageWhenInvalidID)
 	}
 
-	number, err := t.tripService.GetSoldTicketNumber(c.Request().Context(), param)
+	number, err := t.tripService.GetSoldTicketNumber(c.Request().Context(), id)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, WarnInternalError)
 	}
@@ -123,5 +124,16 @@ func (t *handler) GetSoldTicketNumber(c echo.Context) error {
 }
 
 func (t *handler) GetTotalRevenueForSpecificTrip(c echo.Context) error {
+	p := c.Param("id")
+	id, err := strconv.Atoi(p)
+	if err != nil {
+		return c.String(http.StatusBadRequest, WarnMessageWhenInvalidID)
+	}
 
+	revenue, err := t.tripService.GetTotalRevenueForSpecificTrip(c.Request().Context(), id)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, WarnInternalError)
+	}
+
+	return c.JSON(http.StatusOK, revenue)
 }

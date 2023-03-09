@@ -16,6 +16,7 @@ type Service interface {
 	CreateTrip(ctx context.Context, trip *Trip) error
 	CancelTrip(ctx context.Context, id int) error
 	GetSoldTicketNumber(ctx context.Context, tripID int) (int, error)
+	GetTotalRevenueForSpecificTrip(ctx context.Context, tripID int) (float64, error)
 }
 
 type defaultService struct {
@@ -69,4 +70,20 @@ func (s *defaultService) GetSoldTicketNumber(ctx context.Context, tripID int) (i
 	}
 
 	return number, nil
+}
+
+func (s *defaultService) GetTotalRevenueForSpecificTrip(ctx context.Context, tripID int) (float64, error) {
+	trip, err := s.tripRepo.FindByTripID(ctx, tripID)
+	if err != nil {
+		return -1, err
+	}
+
+	soldTicketNumber, err := s.tripRepo.GetSoldTicketNumber(ctx, tripID)
+	if err != nil {
+		return -1, err
+	}
+
+	total := trip.Price * float64(soldTicketNumber)
+
+	return total, nil
 }
