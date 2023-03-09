@@ -23,8 +23,8 @@ type Param struct {
 
 type Log struct {
 	ID        uint    `gorm:"primarykey"`
-	Channel   Channel `gorm:"not null" json:"channel"` // SMS, EMAIL
-	Log       string  `gorm:"not null" json:"log"`     // Yeni kayıt olan dilaragorum@gmail.com'a hoşgeldin maili gönderildi
+	Channel   Channel `gorm:"not null" json:"channel"`
+	Log       string  `gorm:"not null" json:"log"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`

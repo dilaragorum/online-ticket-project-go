@@ -1,4 +1,4 @@
-package aut
+package auth
 
 import (
 	"github.com/golang-jwt/jwt/v4"
@@ -14,11 +14,16 @@ const (
 type Claims struct {
 	Username          string            `json:"username"`
 	AuthorizationType AuthorizationType `json:"authorization_type"`
+	UserID            uint
 	jwt.RegisteredClaims
 }
 
 func (c *Claims) IsAdmin() bool {
 	return c.AuthorizationType == AuthAdmin
+}
+
+func (c *Claims) IsNotAdmin() bool {
+	return !c.IsAdmin()
 }
 
 func (c *Claims) IsUser() bool {

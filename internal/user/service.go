@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 	"errors"
-	"github.com/dilaragorum/online-ticket-project-go/internal/aut"
+	"github.com/dilaragorum/online-ticket-project-go/internal/auth"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -17,7 +17,7 @@ var (
 
 type Service interface {
 	Register(ctx context.Context, user *User) error
-	Login(ctx context.Context, credentials aut.Credentials) (*User, error)
+	Login(ctx context.Context, credentials auth.Credentials) (*User, error)
 }
 
 type defaultService struct {
@@ -41,7 +41,7 @@ func (s *defaultService) Register(ctx context.Context, user *User) error {
 	return nil
 }
 
-func (s *defaultService) Login(ctx context.Context, credentials aut.Credentials) (*User, error) {
+func (s *defaultService) Login(ctx context.Context, credentials auth.Credentials) (*User, error) {
 	user, err := s.userRepo.GetByUserName(ctx, credentials.UserName)
 	if err != nil {
 		if errors.Is(err, ErrNoRecord) {

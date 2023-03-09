@@ -1,7 +1,7 @@
 package user
 
 import (
-	"github.com/dilaragorum/online-ticket-project-go/internal/aut"
+	"github.com/dilaragorum/online-ticket-project-go/internal/auth"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"net/mail"
@@ -14,11 +14,11 @@ const (
 )
 
 type User struct {
-	ID                uint                  `gorm:"primarykey"`
-	UserName          string                `gorm:"not null;unique" json:"user_name"`
-	Password          string                `gorm:"not null" json:"password"`
-	AuthorizationType aut.AuthorizationType `gorm:"check: authorization_type in('admin','user')" json:"authorization_type"`
-	Email             string                `gorm:"unique" json:"email"`
+	ID                uint                   `gorm:"primarykey"`
+	UserName          string                 `gorm:"not null;unique" json:"user_name"`
+	Password          string                 `gorm:"not null" json:"password"`
+	AuthorizationType auth.AuthorizationType `gorm:"check: authorization_type in('admin','user')" json:"authorization_type"`
+	Email             string                 `gorm:"unique" json:"email"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	DeletedAt         gorm.DeletedAt `gorm:"index"`

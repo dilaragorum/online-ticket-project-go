@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/dilaragorum/online-ticket-project-go/internal/admin"
+	"github.com/dilaragorum/online-ticket-project-go/internal/auth"
 	"github.com/dilaragorum/online-ticket-project-go/internal/notification"
 	"github.com/dilaragorum/online-ticket-project-go/internal/payment"
 	"github.com/dilaragorum/online-ticket-project-go/internal/ticket"
@@ -15,14 +15,15 @@ import (
 
 func main() {
 	e := echo.New()
+	e.Use(auth.TokenMiddleware)
+
+	jwtSecretKey := os.Getenv("ONLINE_TICKET_GO_JWTKEY")
 
 	connectionPool, err := database.Setup()
 	if err != nil {
 		log.Fatal(err)
 	}
 	database.Migrate()
-
-	jwtSecretKey := os.Getenv("ONLINE_TICKET_GO_JWTKEY")
 
 	notificationRepository := notification.NewNotificationRepository(connectionPool)
 	notificationService := notification.NewService(notificationRepository)
@@ -37,16 +38,12 @@ func main() {
 	userService := user.NewUserService(userRepository)
 	user.NewHandler(e, userService, notificationService, jwtSecretKey)
 
-	// ADMIN
-	adminRepository := trip.NewTripRepository(connectionPool)
-	adminService := admin.NewAdminService(adminRepository)
-	admin.NewHandler(e, adminService, jwtSecretKey)
-
 	//PAYMENT
 	paymentClient := payment.NewClient()
 
 	// TICKET
-	service := ticket.NewService(notificationService, tripRepo, paymentClient)
+	ticketRepo := ticket.NewTicketRepository(connectionPool)
+	service := ticket.NewService(ticketRepo, notificationService, tripRepo, paymentClient)
 	ticket.NewHandler(e, service)
 
 	e.Logger.Fatal(e.Start(":8080"))

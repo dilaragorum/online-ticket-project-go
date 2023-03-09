@@ -1,6 +1,7 @@
 package ticket
 
 import (
+	"github.com/dilaragorum/online-ticket-project-go/internal/auth"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
@@ -26,6 +27,8 @@ func NewHandler(e *echo.Echo, service Service) *handler {
 }
 
 func (ti *handler) Purchase(c echo.Context) error {
+	claim := c.Get("claim").(auth.Claims)
+
 	ticket := new(Ticket)
 
 	if err := c.Bind(&ticket); err != nil {
@@ -44,7 +47,7 @@ func (ti *handler) Purchase(c echo.Context) error {
 		return c.String(http.StatusBadRequest, WarnWhenPhoneInvalid)
 	}
 
-	if err := ti.service.Purchase(c.Request().Context(), ticket); err != nil {
+	if err := ti.service.Purchase(c.Request().Context(), ticket, claim); err != nil {
 		return c.String(http.StatusInternalServerError, "There is something wrong")
 	}
 

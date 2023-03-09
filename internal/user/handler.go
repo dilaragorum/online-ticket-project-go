@@ -3,7 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
-	"github.com/dilaragorum/online-ticket-project-go/internal/aut"
+	"github.com/dilaragorum/online-ticket-project-go/internal/auth"
 	"github.com/dilaragorum/online-ticket-project-go/internal/notification"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -37,8 +37,6 @@ func NewHandler(e *echo.Echo, userService Service, notificationService notificat
 		notificationService: notificationService,
 		JwtSecretKey:        jwtSecretKey,
 	}
-
-	//user := e.Group("/user", h.userMiddleware)
 
 	e.POST("/register", h.Register)
 	e.POST("/login", h.Login)
@@ -101,7 +99,7 @@ func (h *handler) Register(c echo.Context) error {
 }
 
 func (h *handler) Login(c echo.Context) error {
-	var credentials aut.Credentials
+	var credentials auth.Credentials
 	if err := c.Bind(&credentials); err != nil {
 		return c.String(http.StatusBadRequest, WarnNonValidCredentials)
 	}
@@ -121,9 +119,10 @@ func (h *handler) Login(c echo.Context) error {
 	// Declare the expiration time of the token
 	// here, we have kept it as 5 minutes
 	expirationTime := &jwt.NumericDate{Time: time.Now().Add(time.Hour)}
-	claims := aut.Claims{
+	claims := auth.Claims{
 		Username:          user.UserName,
 		AuthorizationType: user.AuthorizationType,
+		UserID:            user.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: expirationTime,
 		},
