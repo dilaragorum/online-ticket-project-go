@@ -2,11 +2,17 @@ package ticket
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/dilaragorum/online-ticket-project-go/internal/auth"
 	"github.com/dilaragorum/online-ticket-project-go/internal/notification"
 	"github.com/dilaragorum/online-ticket-project-go/internal/payment"
 	"github.com/dilaragorum/online-ticket-project-go/internal/trip"
+)
+
+var (
+	ErrNoCapacity = errors.New("capacity is full")
+	ErrTripNotFound = errors.New("this trip does not exist")
 )
 
 type Service interface {
@@ -29,8 +35,11 @@ func (s *defaultService) Purchase(ctx context.Context, ticket *Ticket, claims au
 		return err
 	}
 
-	trip, err := s.tripRepo.FindByTripID(ctx, ticket.TripID)
+	requestedTrip, err := s.tripRepo.FindByTripID(ctx, ticket.TripID)
 	if err != nil {
+		if errors.Is(err, trip.ErrTripNotFound) {
+			return ErrTripNotFound
+		}
 		return err
 	}
 
@@ -39,12 +48,12 @@ func (s *defaultService) Purchase(ctx context.Context, ticket *Ticket, claims au
 		To:          ticket.Phone,
 		From:        "company ticket",
 		Title:       "Purchase Detail",
-		Description: fmt.Sprintf("Traveler Name: %s FromTo: %s-%s Date: %s Vehicle: %s", ticket.FullName, trip.From, trip.To, trip.Date, trip.Vehicle),
+		Description: fmt.Sprintf("Traveler Name: %s FromTo: %s-%s Date: %s Vehicle: %s", ticket.FullName, requestedTrip.From, requestedTrip.To, requestedTrip.Date, requestedTrip.Vehicle),
 		LogMsg:      fmt.Sprintf("The %s who has %d id purchase ticket/s", claims.Username, claims.UserID),
 	}
 
 	purchasedTicket := Ticket{
-		TripID: trip.ID,
+		TripID: requestedTrip.ID,
 		UserID: claims.UserID,
 		Passenger: Passenger{
 			Gender:   ticket.Gender,
@@ -52,6 +61,15 @@ func (s *defaultService) Purchase(ctx context.Context, ticket *Ticket, claims au
 			Email:    ticket.Email,
 			Phone:    ticket.Phone,
 		},
+	}
+
+	if requestedTrip.AvailableSeat == 0 {
+		return ErrNoCapacity
+	}
+
+	//Trips tablosundan capacity'den alınan bilet sayısı kadar kişi düşeceğiz.
+	if err = s.tripRepo.UpdateAvailableSeat(ctx, requestedTrip.ID, 1); err != nil {
+		return err
 	}
 
 	err = s.ticketRepo.CreateTicketWithDetails(ctx, &purchasedTicket)

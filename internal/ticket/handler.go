@@ -48,7 +48,14 @@ func (ti *handler) Purchase(c echo.Context) error {
 	}
 
 	if err := ti.service.Purchase(c.Request().Context(), ticket, claim); err != nil {
-		return c.String(http.StatusInternalServerError, "There is something wrong")
+		switch err {
+		case ErrNoCapacity:
+			return c.String(http.StatusBadRequest, "Capacity is full. Please search another trip")
+		case ErrTripNotFound:
+			return c.String(http.StatusBadRequest, "This trip does not exist. Please check trip information.")
+		default:
+			return c.String(http.StatusInternalServerError, "There is something wrong")
+		}
 	}
 
 	return c.String(http.StatusOK, SuccessPurchasedMessage)

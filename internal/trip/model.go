@@ -31,7 +31,8 @@ type Trip struct {
 	Vehicle         Vehicle   `gorm:"not null;index:,unique,composite:idx_member" json:"vehicle"`
 	Date            time.Time `gorm:"not null;index:,unique,composite:idx_member" json:"date"`
 	ArrivalDuration string    `json:"arrival_duration"`
-	Capacity        int       `gorm:"not null" json:"capacity"`
+	Capacity        uint      `gorm:"not null;check:capacity>0" json:"capacity"`
+	AvailableSeat   uint      `gorm:"not null;check:available_seat>=0" json:"available_seat"`
 	Price           float64   `gorm:"not null;check:price>0" json:"price"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
@@ -47,6 +48,8 @@ func (t *Trip) BeforeCreate(tx *gorm.DB) error {
 	default:
 		t.Capacity = DefaultCapacity
 	}
+
+	t.AvailableSeat = t.Capacity
 
 	return nil
 }

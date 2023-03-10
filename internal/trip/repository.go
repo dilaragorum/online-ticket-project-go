@@ -11,7 +11,7 @@ import (
 
 var (
 	ErrDuplicateIdx = errors.New(`ERROR: duplicate key value violates unique constraint "idx_trips_idx_member" (SQLSTATE 23505)`)
-	ErrTripNotFound = errors.New("there is no trip with that ID")
+	ErrTripNotFound = errors.New("this trip is not available")
 )
 
 type Repository interface {
@@ -20,6 +20,7 @@ type Repository interface {
 	FindByFilter(ctx context.Context, trip *Filter) ([]Trip, error)
 	FindByTripID(ctx context.Context, tripID int) (*Trip, error)
 	GetSoldTicketNumber(ctx context.Context, tripID int) (int, error)
+	UpdateAvailableSeat(ctx context.Context, tripID int, ticketNum int) error
 }
 
 type defaultRepository struct {
@@ -84,14 +85,15 @@ func (t *defaultRepository) FindByFilter(ctx context.Context, filter *Filter) ([
 }
 
 func (t *defaultRepository) FindByTripID(ctx context.Context, tripID int) (*Trip, error) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 100*time.Second)
 	defer cancel()
 
 	var trip Trip
 
-	if err := t.database.WithContext(timeoutCtx).Where(&Trip{
-		ID: tripID,
-	}).Find(&trip).Error; err != nil {
+	if err := t.database.WithContext(timeoutCtx).First(&trip, tripID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTripNotFound
+		}
 		log.Error(err)
 		return nil, err
 	}
@@ -110,4 +112,16 @@ func (t *defaultRepository) GetSoldTicketNumber(ctx context.Context, tripID int)
 	}
 
 	return int(soldTicketNumber), nil
+}
+
+func (t *defaultRepository) UpdateAvailableSeat(ctx context.Context, tripID int, ticketNum int) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, 100*time.Second)
+	defer cancel()
+
+	if err := t.database.WithContext(timeoutCtx).Model(&Trip{}).Where("id = ?", tripID).Update("available_seat", gorm.Expr("available_seat - ?", ticketNum)); err.Error != nil {
+		log.Error(err.Error)
+		return err.Error
+	}
+
+	return nil
 }
