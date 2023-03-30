@@ -11,7 +11,16 @@ var (
 	WarnWhenEmailInvalid = "Please enter valid email"
 	WarnWhenPhoneInvalid = "Please enter valid phone number"
 
-	SuccessPurchasedMessage = "Ticket was successfully purchased"
+	WarnWhenExceedAllowedTicketToPurchaseForTwenty = "You are not allowed to purchase ticket more than 20"
+	WarnWhenExceedAllowedTicketToPurchaseForFive   = "You are not allowed to purchase ticket more than 5"
+
+	WarnWhenExceedMaleTicketNumber = "You are not allowed to purchase ticket for male more than 2"
+
+	WarnWhenCapacityFull     = "Capacity is full. Please search another trip"
+	WarnWhenTripDoesNotExist = "This trip does not exist. Please check trip information."
+
+	WarnSystemFailureMessage = "There is something wrong. Please try again later"
+	SuccessPurchasedMessage  = "Ticket was successfully purchased"
 )
 
 type handler struct {
@@ -29,32 +38,41 @@ func NewHandler(e *echo.Echo, service Service) *handler {
 func (ti *handler) Purchase(c echo.Context) error {
 	claim := c.Get("claim").(auth.Claims)
 
-	ticket := new(Ticket)
+	// Tickets olması gerekecek.
+	tickets := new([]Ticket)
 
-	if err := c.Bind(&ticket); err != nil {
+	if err := c.Bind(&tickets); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 
-	if ticket.CheckFieldsEmpty() {
-		return c.String(http.StatusBadRequest, WarnWhenEmptyFields)
+	for _, ticket := range *tickets {
+		if ticket.CheckFieldsEmpty() {
+			return c.String(http.StatusBadRequest, WarnWhenEmptyFields)
+		}
+
+		if ticket.IsEmailInvalid() {
+			return c.String(http.StatusBadRequest, WarnWhenEmailInvalid)
+		}
+
+		if ticket.IsPhoneNumberInvalid() {
+			return c.String(http.StatusBadRequest, WarnWhenPhoneInvalid)
+		}
 	}
 
-	if ticket.IsEmailInvalid() {
-		return c.String(http.StatusBadRequest, WarnWhenEmailInvalid)
-	}
-
-	if ticket.IsPhoneNumberInvalid() {
-		return c.String(http.StatusBadRequest, WarnWhenPhoneInvalid)
-	}
-
-	if err := ti.service.Purchase(c.Request().Context(), ticket, claim); err != nil {
+	if err := ti.service.Purchase(c.Request().Context(), *tickets, claim); err != nil {
 		switch err {
+		case ErrExceedAllowedTicketToPurchaseForTwenty:
+			return c.String(http.StatusBadRequest, WarnWhenExceedAllowedTicketToPurchaseForTwenty)
+		case ErrExceedAllowedTicketToPurchaseForFive:
+			return c.String(http.StatusBadRequest, WarnWhenExceedAllowedTicketToPurchaseForFive)
+		case ErrExceedMaleTicketNumber:
+			return c.String(http.StatusBadRequest, WarnWhenExceedMaleTicketNumber)
 		case ErrNoCapacity:
-			return c.String(http.StatusBadRequest, "Capacity is full. Please search another trip")
+			return c.String(http.StatusBadRequest, WarnWhenCapacityFull)
 		case ErrTripNotFound:
-			return c.String(http.StatusBadRequest, "This trip does not exist. Please check trip information.")
+			return c.String(http.StatusBadRequest, WarnWhenTripDoesNotExist)
 		default:
-			return c.String(http.StatusInternalServerError, "There is something wrong")
+			return c.String(http.StatusInternalServerError, WarnSystemFailureMessage)
 		}
 	}
 

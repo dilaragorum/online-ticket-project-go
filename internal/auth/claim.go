@@ -11,9 +11,17 @@ const (
 	AuthUser  AuthorizationType = "user"
 )
 
+type UserType string
+
+const (
+	IndividualUser UserType = "individual"
+	CorporateUser  UserType = "corporate"
+)
+
 type Claims struct {
 	Username          string            `json:"username"`
 	AuthorizationType AuthorizationType `json:"authorization_type"`
+	UserType          UserType          `json:"user_type"`
 	UserID            uint
 	jwt.RegisteredClaims
 }

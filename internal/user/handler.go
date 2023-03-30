@@ -16,7 +16,8 @@ var (
 
 	WarnInternalServerError = "an error occurred please try again later"
 	WarnEmptyUserName       = "Username cannot be empty"
-	WarnNonValidEmail       = "Please enter valid email address"
+	WarnInvalidUserType     = "User type is invalid"
+	WarnInvalidEmail        = "Please enter valid email address"
 	WarnPasswordLength      = "Password should be between 5 and 12 characters"
 
 	WarnNonValidCredentials  = "Please enter valid username or password"
@@ -56,8 +57,12 @@ func (h *handler) Register(c echo.Context) error {
 		return c.String(http.StatusBadRequest, WarnEmptyUserName)
 	}
 
+	if user.IsUserTypeInvalid() {
+		return c.String(http.StatusBadRequest, WarnInvalidUserType)
+	}
+
 	if user.IsEmailInvalid() {
-		return c.String(http.StatusBadRequest, WarnNonValidEmail)
+		return c.String(http.StatusBadRequest, WarnInvalidEmail)
 	}
 
 	if user.IsPasswordInvalid() {
@@ -123,6 +128,7 @@ func (h *handler) Login(c echo.Context) error {
 		Username:          user.UserName,
 		AuthorizationType: user.AuthorizationType,
 		UserID:            user.ID,
+		UserType:          user.UserType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: expirationTime,
 		},

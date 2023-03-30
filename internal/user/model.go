@@ -18,6 +18,7 @@ type User struct {
 	UserName          string                 `gorm:"not null;unique" json:"user_name"`
 	Password          string                 `gorm:"not null" json:"password"`
 	AuthorizationType auth.AuthorizationType `gorm:"check: authorization_type in('admin','user')" json:"authorization_type"`
+	UserType          auth.UserType          `gorm:"check: user_type in('individual','corporate')" json:"user_type"`
 	Email             string                 `gorm:"unique" json:"email"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -26,6 +27,14 @@ type User struct {
 
 func (u *User) IsNameEmpty() bool {
 	return u.UserName == ""
+}
+
+func (u *User) IsUserTypeInvalid() bool {
+	return !u.IsUserTypeValid()
+}
+
+func (u *User) IsUserTypeValid() bool {
+	return u.UserType == auth.IndividualUser || u.UserType == auth.CorporateUser
 }
 
 func (u *User) IsEmailValid() bool {
