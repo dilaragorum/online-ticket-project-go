@@ -32,11 +32,11 @@ func TokenMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				return c.String(http.StatusUnauthorized, "Please login again")
 			}
 
-			return c.String(http.StatusForbidden, "Please login again")
+			return c.String(http.StatusUnauthorized, "Please login again")
 		}
 
 		if !parsedTokenInfo.Valid {
-			return c.String(http.StatusUnauthorized, "Invalid token")
+			return c.String(http.StatusForbidden, "Invalid token")
 		}
 
 		c.Set("claim", claim)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/dilaragorum/online-ticket-project-go/internal/notification"
 	"github.com/dilaragorum/online-ticket-project-go/internal/ticket"
-	model2 "github.com/dilaragorum/online-ticket-project-go/internal/trip"
+	model "github.com/dilaragorum/online-ticket-project-go/internal/trip"
 	"github.com/dilaragorum/online-ticket-project-go/internal/user"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -38,7 +38,7 @@ func Setup() (*gorm.DB, error) {
 }
 
 func Migrate() {
-	if err := db.AutoMigrate(&user.User{}, &notification.Log{}, &model2.Trip{}, &ticket.Ticket{}); err != nil {
+	if err := db.AutoMigrate(&user.User{}, &notification.Log{}, &model.Trip{}, &ticket.Ticket{}); err != nil {
 		panic(err)
 	}
 }

@@ -26,6 +26,14 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+func (c *Claims) IsIndividualUser() bool {
+	return c.UserType == IndividualUser
+}
+
+func (c *Claims) IsCorporatedUser() bool {
+	return c.UserType == CorporateUser
+}
+
 func (c *Claims) IsAdmin() bool {
 	return c.AuthorizationType == AuthAdmin
 }

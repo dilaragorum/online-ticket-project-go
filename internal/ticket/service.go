@@ -10,13 +10,21 @@ import (
 	"github.com/dilaragorum/online-ticket-project-go/internal/trip"
 )
 
+const (
+	CorporatedLimit       = 20
+	IndividualLimit       = 5
+	LeastMaleTicketNumber = 2
+)
+
 var (
 	ErrNoCapacity   = errors.New("capacity is full")
 	ErrTripNotFound = errors.New("this trip does not exist")
 
+	// TODO: handlerdaki gibi fonksiyon yapalım.
 	ErrExceedAllowedTicketToPurchaseForTwenty = errors.New("exceed number of tickets allowed to be purchased(20)")
 	ErrExceedAllowedTicketToPurchaseForFive   = errors.New("exceed number of tickets allowed to be purchased(5)")
-	ErrExceedMaleTicketNumber                 = errors.New("exceed number of male ticket allowed to be purchased")
+
+	ErrExceedMaleTicketNumber = errors.New("exceed number of male ticket allowed to be purchased")
 )
 
 type Service interface {
@@ -35,32 +43,20 @@ func NewService(ticketRepo Repository, notificationService notification.Service,
 }
 
 func (s *defaultService) Purchase(ctx context.Context, tickets []Ticket, claims auth.Claims) error {
-	if claims.UserType == auth.CorporateUser && len(tickets) > 20 {
-		return ErrExceedAllowedTicketToPurchaseForTwenty
-	}
-
-	if claims.UserType == auth.IndividualUser && len(tickets) > 5 {
-		return ErrExceedAllowedTicketToPurchaseForFive
-	}
-
-	var maleNum int
-
-	for i := range tickets {
-		if tickets[i].Gender == Male {
-			maleNum++
-		}
-	}
-
-	if claims.UserType == auth.IndividualUser && maleNum > 2 {
-		return ErrExceedMaleTicketNumber
-	}
-
-	if err := s.payment.Transfer(); err != nil {
+	if err := checkCorporatedLimit(claims, tickets); err != nil {
 		return err
 	}
 
-	params := make([]notification.Param, 0)
-	passengersNames := make([]string, 0)
+	if err := checkIndividualLimit(claims, tickets); err != nil {
+		return err
+	}
+
+	if err := checkMaleTicketLimit(tickets, claims); err != nil {
+		return err
+	}
+
+	params := make([]notification.Param, 0, len(tickets))
+	passengersNames := make([]string, 0, len(tickets))
 
 	for i := range tickets {
 		ticket := tickets[i]
@@ -76,12 +72,16 @@ func (s *defaultService) Purchase(ctx context.Context, tickets []Ticket, claims 
 		}
 
 		params = append(params, notification.Param{
-			Channel:     notification.SMS,
-			To:          ticket.Phone,
-			From:        "X Ticket Company",
-			Title:       "Purchase Detail",
-			Description: fmt.Sprintf("Congrats! Your transaction is successfull. Here your ticket Details:\n FromTo: %s-%s\n Date: %s\n Vehicle: %s\n Passengers:\n", requestedTrip.From, requestedTrip.To, requestedTrip.Date, requestedTrip.Vehicle),
-			LogMsg:      fmt.Sprintf("The %s who has %d id purchase ticket/s", claims.Username, claims.UserID),
+			Channel: notification.SMS,
+			To:      ticket.Phone,
+			From:    "X Ticket Company",
+			Title:   "Purchase Detail",
+			Description: fmt.Sprintf(`Congrats! Your transaction is successful. Here your ticket Details:
+FromTo: %s-%s
+Date: %s
+Vehicle: %s
+Passengers:`, requestedTrip.From, requestedTrip.To, requestedTrip.Date, requestedTrip.Vehicle),
+			LogMsg: fmt.Sprintf("The %s who has %d id purchase ticket/s", claims.Username, claims.UserID),
 		})
 
 		purchasedTicket := Ticket{
@@ -95,7 +95,7 @@ func (s *defaultService) Purchase(ctx context.Context, tickets []Ticket, claims 
 			},
 		}
 
-		if requestedTrip.AvailableSeat == 0 || requestedTrip.AvailableSeat < uint(len(tickets)) {
+		if ok := requestedTrip.CheckAvailableSeat(len(tickets)); !ok {
 			return ErrNoCapacity
 		}
 
@@ -103,11 +103,13 @@ func (s *defaultService) Purchase(ctx context.Context, tickets []Ticket, claims 
 			return ErrNoCapacity
 		}
 
-		err = s.ticketRepo.CreateTicketWithDetails(ctx, &purchasedTicket)
-		if err != nil {
+		if err = s.ticketRepo.CreateTicketWithDetails(ctx, &purchasedTicket); err != nil {
 			return err
 		}
+	}
 
+	if err := s.payment.Transfer(); err != nil {
+		return err
 	}
 
 	for i := range params {
@@ -120,6 +122,36 @@ func (s *defaultService) Purchase(ctx context.Context, tickets []Ticket, claims 
 		if err := s.notificationService.Send(ctx, params[i]); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func checkIndividualLimit(claims auth.Claims, tickets []Ticket) error {
+	if claims.IsIndividualUser() && len(tickets) > IndividualLimit {
+		return ErrExceedAllowedTicketToPurchaseForFive
+	}
+	return nil
+}
+
+func checkCorporatedLimit(claims auth.Claims, tickets []Ticket) error {
+	if claims.IsCorporatedUser() && len(tickets) > CorporatedLimit {
+		return ErrExceedAllowedTicketToPurchaseForTwenty
+	}
+	return nil
+}
+
+func checkMaleTicketLimit(tickets []Ticket, claims auth.Claims) error {
+	var maleNum int
+
+	for i := range tickets {
+		if tickets[i].Gender == Male {
+			maleNum++
+		}
+	}
+
+	if claims.IsIndividualUser() && maleNum > LeastMaleTicketNumber {
+		return ErrExceedMaleTicketNumber
 	}
 
 	return nil

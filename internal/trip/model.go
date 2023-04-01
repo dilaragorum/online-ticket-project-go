@@ -39,6 +39,13 @@ type Trip struct {
 	DeletedAt       gorm.DeletedAt `gorm:"index"`
 }
 
+func (t *Trip) CheckAvailableSeat(numberOfTickets int) bool {
+	if t.AvailableSeat == 0 || t.AvailableSeat < uint(numberOfTickets) {
+		return false
+	}
+	return true
+}
+
 func (t *Trip) BeforeCreate(tx *gorm.DB) error {
 	switch t.Vehicle {
 	case VehicleFlight:
