@@ -4,12 +4,12 @@ import (
 	"errors"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
+	"github.com/spf13/viper"
 	"net/http"
-	"os"
 )
 
 func TokenMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	jwtSecretKey := os.Getenv("ONLINE_TICKET_GO_JWTKEY")
+	jwtSecretKey := viper.Get("ONLINE_TICKET_GO_JWTKEY").(string)
 
 	return func(c echo.Context) error {
 		if c.Request().RequestURI == "/register" || c.Request().RequestURI == "/login" {

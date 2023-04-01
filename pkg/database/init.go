@@ -6,27 +6,21 @@ import (
 	"github.com/dilaragorum/online-ticket-project-go/internal/ticket"
 	model "github.com/dilaragorum/online-ticket-project-go/internal/trip"
 	"github.com/dilaragorum/online-ticket-project-go/internal/user"
+	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"os"
 )
 
 var db *gorm.DB
 
 func Setup() (*gorm.DB, error) {
-	os.Setenv("POSTGRES_HOST", "localhost")
-	os.Setenv("POSTGRES_PORT", "5432")
-	os.Setenv("POSTGRES_USER", "online_ticket_user")
-	os.Setenv("POSTGRES_PASSWORD", "postgres")
-	os.Setenv("POSTGRES_DB", "online_ticket_api")
-
 	connstr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("POSTGRES_HOST"),
-		os.Getenv("POSTGRES_PORT"),
-		os.Getenv("POSTGRES_USER"),
-		os.Getenv("POSTGRES_PASSWORD"),
-		os.Getenv("POSTGRES_DB"))
+		viper.Get("POSTGRES_HOST").(string),
+		viper.Get("POSTGRES_PORT").(string),
+		viper.Get("POSTGRES_USER").(string),
+		viper.Get("POSTGRES_PASSWORD").(string),
+		viper.Get("POSTGRES_DB").(string))
 
 	var err error
 	db, err = gorm.Open(postgres.Open(connstr), &gorm.Config{})
