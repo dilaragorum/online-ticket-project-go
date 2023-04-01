@@ -20,9 +20,9 @@ var (
 	ErrNoCapacity   = errors.New("capacity is full")
 	ErrTripNotFound = errors.New("this trip does not exist")
 
-	// TODO: handlerdaki gibi fonksiyon yapalım.
-	ErrExceedAllowedTicketToPurchaseForTwenty = errors.New("exceed number of tickets allowed to be purchased(20)")
-	ErrExceedAllowedTicketToPurchaseForFive   = errors.New("exceed number of tickets allowed to be purchased(5)")
+	ErrExceedAllowedTicketToPurchase = func(limit int) error {
+		return fmt.Errorf("exceed number of tickets allowed to be purchased(%d)", limit)
+	}
 
 	ErrExceedMaleTicketNumber = errors.New("exceed number of male ticket allowed to be purchased")
 )
@@ -129,14 +129,14 @@ Passengers:`, requestedTrip.From, requestedTrip.To, requestedTrip.Date, requeste
 
 func checkIndividualLimit(claims auth.Claims, tickets []Ticket) error {
 	if claims.IsIndividualUser() && len(tickets) > IndividualLimit {
-		return ErrExceedAllowedTicketToPurchaseForFive
+		return ErrExceedAllowedTicketToPurchase(IndividualLimit)
 	}
 	return nil
 }
 
 func checkCorporatedLimit(claims auth.Claims, tickets []Ticket) error {
 	if claims.IsCorporatedUser() && len(tickets) > CorporatedLimit {
-		return ErrExceedAllowedTicketToPurchaseForTwenty
+		return ErrExceedAllowedTicketToPurchase(CorporatedLimit)
 	}
 	return nil
 }

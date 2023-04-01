@@ -64,9 +64,9 @@ func (ti *handler) Purchase(c echo.Context) error {
 
 	if err := ti.service.Purchase(c.Request().Context(), tickets, claim); err != nil {
 		switch err {
-		case ErrExceedAllowedTicketToPurchaseForTwenty:
+		case ErrExceedAllowedTicketToPurchase(CorporatedLimit):
 			return c.String(http.StatusBadRequest, WarnWhenExceedAllowedTicketToPurchase(CorporatedLimit))
-		case ErrExceedAllowedTicketToPurchaseForFive:
+		case ErrExceedAllowedTicketToPurchase(IndividualLimit):
 			return c.String(http.StatusBadRequest, WarnWhenExceedAllowedTicketToPurchase(IndividualLimit))
 		case ErrExceedMaleTicketNumber:
 			return c.String(http.StatusBadRequest, WarnWhenExceedMaleTicketNumber)
