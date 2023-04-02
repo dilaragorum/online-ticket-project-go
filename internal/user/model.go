@@ -29,6 +29,14 @@ func (u *User) IsNameEmpty() bool {
 	return u.UserName == ""
 }
 
+func (u *User) IsAuthTypeInvalid() bool {
+	return !u.IsAuthTypeValid()
+}
+
+func (u *User) IsAuthTypeValid() bool {
+	return u.AuthorizationType == auth.AuthUser || u.AuthorizationType == auth.AuthAdmin
+}
+
 func (u *User) IsUserTypeInvalid() bool {
 	return !u.IsUserTypeValid()
 }
