@@ -14,15 +14,14 @@ const (
 )
 
 type User struct {
-	ID                uint                   `gorm:"primarykey"`
-	UserName          string                 `gorm:"not null;unique" json:"user_name"`
-	Password          string                 `gorm:"not null" json:"password"`
-	AuthorizationType auth.AuthorizationType `gorm:"check: authorization_type in('admin','user')" json:"authorization_type"`
-	UserType          auth.UserType          `gorm:"check: user_type in('individual','corporate')" json:"user_type"`
-	Email             string                 `gorm:"unique" json:"email"`
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	DeletedAt         gorm.DeletedAt `gorm:"index"`
+	ID        uint          `gorm:"primarykey"`
+	UserName  string        `gorm:"not null;unique" json:"user_name"`
+	Password  string        `gorm:"not null" json:"password"`
+	UserType  auth.UserType `gorm:"check: user_type in('admin','individual','corporate')" json:"user_type"`
+	Email     string        `gorm:"unique" json:"email"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
 func (u *User) IsNameEmpty() bool {
@@ -30,19 +29,24 @@ func (u *User) IsNameEmpty() bool {
 }
 
 func (u *User) IsAuthTypeInvalid() bool {
-	return !u.IsAuthTypeValid()
-}
-
-func (u *User) IsAuthTypeValid() bool {
-	return u.AuthorizationType == auth.AuthUser || u.AuthorizationType == auth.AuthAdmin
-}
-
-func (u *User) IsUserTypeInvalid() bool {
 	return !u.IsUserTypeValid()
 }
 
 func (u *User) IsUserTypeValid() bool {
-	return u.UserType == auth.IndividualUser || u.UserType == auth.CorporateUser
+	switch u.UserType {
+	case auth.CorporateUser:
+		fallthrough
+	case auth.Admin:
+		fallthrough
+	case auth.IndividualUser:
+		return true
+	default:
+		return false
+	}
+}
+
+func (u *User) IsUserTypeInvalid() bool {
+	return !u.IsUserTypeValid()
 }
 
 func (u *User) IsEmailValid() bool {

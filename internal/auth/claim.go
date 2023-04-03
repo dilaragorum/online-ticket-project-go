@@ -4,25 +4,18 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-type AuthorizationType string
-
-const (
-	AuthAdmin AuthorizationType = "admin"
-	AuthUser  AuthorizationType = "user"
-)
-
 type UserType string
 
 const (
+	Admin          UserType = "admin"
 	IndividualUser UserType = "individual"
 	CorporateUser  UserType = "corporate"
 )
 
 type Claims struct {
-	Username          string            `json:"username"`
-	AuthorizationType AuthorizationType `json:"authorization_type"`
-	UserType          UserType          `json:"user_type"`
-	UserID            uint
+	Username string   `json:"username"`
+	UserType UserType `json:"user_type"`
+	UserID   uint
 	jwt.RegisteredClaims
 }
 
@@ -35,7 +28,7 @@ func (c *Claims) IsCorporatedUser() bool {
 }
 
 func (c *Claims) IsAdmin() bool {
-	return c.AuthorizationType == AuthAdmin
+	return c.UserType == Admin
 }
 
 func (c *Claims) IsNotAdmin() bool {
@@ -43,7 +36,7 @@ func (c *Claims) IsNotAdmin() bool {
 }
 
 func (c *Claims) IsUser() bool {
-	return c.AuthorizationType == AuthAdmin
+	return c.UserType == IndividualUser || c.UserType == CorporateUser
 }
 
 func (c *Claims) IsUserOrAdmin() bool {

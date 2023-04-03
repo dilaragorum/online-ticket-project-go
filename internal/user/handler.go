@@ -127,13 +127,12 @@ func (h *handler) Login(c echo.Context) error {
 	}
 
 	// Declare the expiration time of the token
-	// here, we have kept it as 5 minutes
+
 	expirationTime := &jwt.NumericDate{Time: time.Now().Add(time.Hour)}
 	claims := auth.Claims{
-		Username:          user.UserName,
-		AuthorizationType: user.AuthorizationType,
-		UserID:            user.ID,
-		UserType:          user.UserType,
+		Username: user.UserName,
+		UserID:   user.ID,
+		UserType: user.UserType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: expirationTime,
 		},

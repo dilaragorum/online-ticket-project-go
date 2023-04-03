@@ -8,11 +8,16 @@ import (
 	"net/http"
 )
 
+var allowList = map[string]bool{
+	"/register": true,
+	"/login":    true,
+}
+
 func TokenMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	jwtSecretKey := viper.Get("ONLINE_TICKET_GO_JWTKEY").(string)
+	jwtSecretKey := viper.GetString("ONLINE_TICKET_GO_JWTKEY")
 
 	return func(c echo.Context) error {
-		if c.Request().RequestURI == "/register" || c.Request().RequestURI == "/login" {
+		if _, ok := allowList[c.Request().RequestURI]; ok {
 			return next(c)
 		}
 
