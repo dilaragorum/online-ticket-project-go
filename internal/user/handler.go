@@ -162,6 +162,8 @@ func (h *handler) Login(c echo.Context) error {
 func (h *handler) Logout(c echo.Context) error {
 	cookie := new(http.Cookie)
 	cookie.Name = "token"
-	cookie.Expires = time.Now()
+	cookie.Value = ""
+	cookie.MaxAge = 0
+	c.SetCookie(cookie)
 	return c.String(http.StatusOK, "You have successfully logout")
 }

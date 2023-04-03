@@ -16,11 +16,11 @@ var db *gorm.DB
 func Setup() (*gorm.DB, error) {
 	connstr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		viper.Get("POSTGRES_HOST").(string),
-		viper.Get("POSTGRES_PORT").(string),
-		viper.Get("POSTGRES_USER").(string),
-		viper.Get("POSTGRES_PASSWORD").(string),
-		viper.Get("POSTGRES_DB").(string))
+		viper.GetString("POSTGRES_HOST"),
+		viper.GetString("POSTGRES_PORT"),
+		viper.GetString("POSTGRES_USER"),
+		viper.GetString("POSTGRES_PASSWORD"),
+		viper.GetString("POSTGRES_DB"))
 
 	var err error
 	db, err = gorm.Open(postgres.Open(connstr), &gorm.Config{})
